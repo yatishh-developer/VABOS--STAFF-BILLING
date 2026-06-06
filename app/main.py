@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import attendance, auth, notifications, realtime, staff, tasks
 from app.core.config import get_settings
-from app.db.database import Base, check_database_connection, engine
+from app.db.database import check_database_connection, ensure_database_schema
 from app.db.redis import check_redis_connection, close_redis
 
 settings = get_settings()
@@ -15,8 +15,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.create_tables_on_startup:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        await ensure_database_schema()
     yield
     await close_redis()
 

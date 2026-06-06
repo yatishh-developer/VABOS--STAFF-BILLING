@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = 'HS256'
     access_token_expire_minutes: int = 1440
     allowed_origins: str = '*'
-    create_tables_on_startup: bool = False
+    create_tables_on_startup: bool = True
 
     @property
     def effective_database_url(self) -> str:
