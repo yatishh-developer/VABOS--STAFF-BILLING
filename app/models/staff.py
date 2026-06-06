@@ -1,21 +1,29 @@
 from datetime import datetime
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.database import Base
 
 
 class StaffUser(Base):
     __tablename__ = 'staff_users'
+    __table_args__ = (
+        UniqueConstraint('business_id', 'phone', name='uq_staff_users_business_phone'),
+        UniqueConstraint('business_id', 'email', name='uq_staff_users_business_email'),
+        {'schema': 'staff'},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     business_id: Mapped[str] = mapped_column(String(64), index=True)
     branch_id: Mapped[str] = mapped_column(String(64), index=True, default='')
     name: Mapped[str] = mapped_column(String(160))
-    phone: Mapped[str] = mapped_column(String(32), unique=True, index=True)
-    email: Mapped[str] = mapped_column(String(180), unique=True, index=True, default='')
+    phone: Mapped[str] = mapped_column(String(32), index=True)
+    email: Mapped[str] = mapped_column(String(180), index=True, default='')
     hashed_password: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(64), default='staff')
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     attendance: Mapped[list['AttendanceEntry']] = relationship(back_populates='staff')
@@ -24,13 +32,17 @@ class StaffUser(Base):
 
 class AttendanceEntry(Base):
     __tablename__ = 'attendance_entries'
+    __table_args__ = {'schema': 'staff'}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    staff_id: Mapped[int] = mapped_column(ForeignKey('staff_users.id'), index=True)
+    staff_id: Mapped[int] = mapped_column(ForeignKey('staff.staff_users.id'), index=True)
     business_id: Mapped[str] = mapped_column(String(64), index=True)
     branch_id: Mapped[str] = mapped_column(String(64), index=True, default='')
     event_type: Mapped[str] = mapped_column(String(32))
     note: Mapped[str] = mapped_column(Text, default='')
+    created_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     sync_status: Mapped[str] = mapped_column(String(32), default='pending')
 
@@ -39,15 +51,19 @@ class AttendanceEntry(Base):
 
 class StaffTask(Base):
     __tablename__ = 'staff_tasks'
+    __table_args__ = {'schema': 'staff'}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    staff_id: Mapped[int] = mapped_column(ForeignKey('staff_users.id'), nullable=True, index=True)
+    staff_id: Mapped[int] = mapped_column(ForeignKey('staff.staff_users.id'), nullable=True, index=True)
     business_id: Mapped[str] = mapped_column(String(64), index=True)
     branch_id: Mapped[str] = mapped_column(String(64), index=True, default='')
     title: Mapped[str] = mapped_column(String(220))
     description: Mapped[str] = mapped_column(Text, default='')
     status: Mapped[str] = mapped_column(String(32), default='open')
     priority: Mapped[str] = mapped_column(String(32), default='normal')
+    created_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -56,14 +72,18 @@ class StaffTask(Base):
 
 class StaffNotification(Base):
     __tablename__ = 'staff_notifications'
+    __table_args__ = {'schema': 'staff'}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    staff_id: Mapped[int] = mapped_column(ForeignKey('staff_users.id'), nullable=True, index=True)
+    staff_id: Mapped[int] = mapped_column(ForeignKey('staff.staff_users.id'), nullable=True, index=True)
     business_id: Mapped[str] = mapped_column(String(64), index=True)
     branch_id: Mapped[str] = mapped_column(String(64), index=True, default='')
     title: Mapped[str] = mapped_column(String(220))
     body: Mapped[str] = mapped_column(Text, default='')
     read: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

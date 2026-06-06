@@ -23,6 +23,6 @@ async def get_current_staff(
     except (JWTError, KeyError, ValueError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid token') from None
     staff = await session.get(StaffUser, staff_id)
-    if staff is None or not staff.active:
+    if staff is None or not staff.active or staff.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Inactive staff')
     return staff

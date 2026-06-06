@@ -1,4 +1,6 @@
 from collections.abc import AsyncGenerator
+import asyncio
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -18,6 +20,8 @@ engine = create_async_engine(
     **engine_kwargs,
 )
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+_schema_ready = False
+_schema_lock = asyncio.Lock()
 
 
 class Base(DeclarativeBase):
@@ -35,8 +39,15 @@ async def check_database_connection() -> bool:
     return True
 
 
-async def ensure_database_schema() -> None:
-    async with engine.begin() as connection:
-        for schema in ('core', 'staff', 'billing', 'sync'):
-            await connection.execute(text(f'create schema if not exists {schema}'))
-        await connection.run_sync(Base.metadata.create_all)
+async def ensure_database_schema(*, force: bool = False) -> None:
+    global _schema_ready
+    if _schema_ready and not force:
+        return
+    async with _schema_lock:
+        if _schema_ready and not force:
+            return
+        async with engine.begin() as connection:
+            for schema in ('core', 'staff', 'billing', 'sync'):
+                await connection.execute(text(f'create schema if not exists {schema}'))
+            await connection.run_sync(Base.metadata.create_all)
+        _schema_ready = True

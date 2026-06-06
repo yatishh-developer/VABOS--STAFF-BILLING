@@ -51,6 +51,7 @@ async def health() -> dict[str, str]:
 @app.get('/health/db')
 async def database_health() -> dict[str, str]:
     try:
+        await ensure_database_schema()
         await check_database_connection()
         return {'status': 'ok', 'database': 'connected'}
     except Exception as error:
