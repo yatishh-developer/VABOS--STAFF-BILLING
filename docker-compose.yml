@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: vabos
+      POSTGRES_PASSWORD: vabos
+      POSTGRES_DB: vabos_staff
+    ports:
+      - "5433:5432"
+    volumes:
+      - staff_pg_data:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+volumes:
+  staff_pg_data:
