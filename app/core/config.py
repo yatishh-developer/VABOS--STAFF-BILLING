@@ -1,6 +1,6 @@
 from functools import lru_cache
 import os
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit, urlunsplit, parse_qsl, urlencode
 
 from dotenv import dotenv_values
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +30,23 @@ class Settings(BaseSettings):
         """Return async SQLAlchemy URL, preferring Supabase split env values."""
         dotenv = dotenv_values('.env')
 
+        def normalize_database_url(url: str) -> str:
+            normalized = url.replace('postgresql+psycopg2://', 'postgresql+asyncpg://')
+            if normalized.startswith('postgresql+asyncpg://'):
+                parts = urlsplit(normalized)
+                query = dict(parse_qsl(parts.query, keep_blank_values=True))
+                query.setdefault('prepared_statement_cache_size', '0')
+                normalized = urlunsplit(
+                    (
+                        parts.scheme,
+                        parts.netloc,
+                        parts.path,
+                        urlencode(query),
+                        parts.fragment,
+                    )
+                )
+            return normalized
+
         def env_value(prefixed_key: str, legacy_key: str) -> str:
             return (
                 os.getenv(prefixed_key)
@@ -49,24 +66,18 @@ class Settings(BaseSettings):
                 raise ValueError('DATABASE_URL or Supabase database env parts are required')
             if password == '[YOUR-PASSWORD]':
                 raise ValueError('Supabase database password is still the placeholder value')
-            return (
+            return normalize_database_url(
                 f'postgresql+asyncpg://{quote(user, safe="")}:'
                 f'{quote(password, safe="")}@{host}:{port}/{dbname}?ssl=require'
             )
 
         explicit_database_url = os.getenv('DATABASE_URL')
         if explicit_database_url:
-            return str(explicit_database_url).replace(
-                'postgresql+psycopg2://',
-                'postgresql+asyncpg://',
-            )
+            return normalize_database_url(str(explicit_database_url))
 
         dotenv_database_url = dotenv.get('DATABASE_URL')
         if dotenv_database_url:
-            return str(dotenv_database_url).replace(
-                'postgresql+psycopg2://',
-                'postgresql+asyncpg://',
-            )
+            return normalize_database_url(str(dotenv_database_url))
 
         return self.database_url
 

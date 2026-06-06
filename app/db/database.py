@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 import asyncio
+from uuid import uuid4
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -11,6 +12,10 @@ settings = get_settings()
 engine_kwargs = {
     'pool_pre_ping': True,
     'pool_recycle': 1800,
+    'connect_args': {
+        'prepared_statement_name_func': lambda: f'__asyncpg_{uuid4()}__',
+        'statement_cache_size': 0,
+    },
 }
 if settings.database_use_null_pool:
     engine_kwargs['poolclass'] = NullPool
