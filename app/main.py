@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import attendance, auth, notifications, realtime, tasks
 from app.core.config import get_settings
 from app.db.database import Base, check_database_connection, engine
-from app.db.redis import close_redis
+from app.db.redis import check_redis_connection, close_redis
 
 settings = get_settings()
 
@@ -52,3 +52,9 @@ async def health() -> dict[str, str]:
 async def database_health() -> dict[str, str]:
     await check_database_connection()
     return {'status': 'ok', 'database': 'connected'}
+
+
+@app.get('/health/redis')
+async def redis_health() -> dict[str, str]:
+    await check_redis_connection()
+    return {'status': 'ok', 'redis': 'connected'}

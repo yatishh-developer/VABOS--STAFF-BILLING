@@ -1,5 +1,6 @@
 from functools import lru_cache
 import os
+from urllib.parse import quote
 
 from dotenv import dotenv_values
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,11 @@ class Settings(BaseSettings):
     database_url: str = 'postgresql+asyncpg://vabos:vabos@localhost:5432/vabos_staff'
     database_use_null_pool: bool = True
     redis_url: str = 'redis://localhost:6379/1'
+    redis_host: str = ''
+    redis_port: int = 6379
+    redis_username: str = ''
+    redis_password: str = ''
+    redis_db: int = 0
     jwt_secret: str = 'change-me'
     jwt_algorithm: str = 'HS256'
     access_token_expire_minutes: int = 1440
@@ -46,7 +52,10 @@ class Settings(BaseSettings):
         if any([user, password, host]):
             if not all([user, password, host, port, dbname]):
                 raise ValueError('DATABASE_URL or Supabase database env parts are required')
-            return f'postgresql+asyncpg://{user}:{password}@{host}:{port}/{dbname}?ssl=require'
+            return (
+                f'postgresql+asyncpg://{quote(user, safe="")}:'
+                f'{quote(password, safe="")}@{host}:{port}/{dbname}?ssl=require'
+            )
 
         dotenv_database_url = dotenv.get('DATABASE_URL')
         if dotenv_database_url:
@@ -56,6 +65,34 @@ class Settings(BaseSettings):
             )
 
         return self.database_url
+
+    @property
+    def effective_redis_url(self) -> str:
+        """Return Redis URL from REDIS_URL or split Redis env settings."""
+        dotenv = dotenv_values('.env')
+        explicit_redis_url = os.getenv('REDIS_URL')
+        if explicit_redis_url:
+            return explicit_redis_url
+
+        host = os.getenv('REDIS_HOST') or str(dotenv.get('REDIS_HOST') or self.redis_host)
+        password = os.getenv('REDIS_PASSWORD') or str(dotenv.get('REDIS_PASSWORD') or self.redis_password)
+        username = os.getenv('REDIS_USERNAME') or str(dotenv.get('REDIS_USERNAME') or self.redis_username)
+        port = os.getenv('REDIS_PORT') or str(dotenv.get('REDIS_PORT') or self.redis_port)
+        db = os.getenv('REDIS_DB') or str(dotenv.get('REDIS_DB') or self.redis_db)
+
+        if host:
+            auth = ''
+            if username and password:
+                auth = f'{quote(username, safe="")}:{quote(password, safe="")}@'
+            elif password:
+                auth = f':{quote(password, safe="")}@'
+            return f'redis://{auth}{host}:{port}/{db}'
+
+        dotenv_redis_url = dotenv.get('REDIS_URL')
+        if dotenv_redis_url:
+            return str(dotenv_redis_url)
+
+        return self.redis_url
 
 
 @lru_cache
