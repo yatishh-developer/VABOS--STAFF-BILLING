@@ -37,3 +37,9 @@ async def staff_socket(websocket: WebSocket, business_id: str):
     except WebSocketDisconnect:
         manager.disconnect(business_id, websocket)
         await redis.publish(f'staff:{business_id}:events', json.dumps({'type': 'device.offline'}))
+
+
+@router.websocket('/ws/staff')
+async def staff_socket_query(websocket: WebSocket):
+    business_id = websocket.query_params.get('businessId') or 'unknown'
+    await staff_socket(websocket, business_id)

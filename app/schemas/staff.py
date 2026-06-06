@@ -12,6 +12,21 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class StaffLoginRequest(BaseModel):
+    loginId: str
+    password: str
+
+
+class StaffSignupRequest(BaseModel):
+    name: str
+    email: str
+    password: str = Field(min_length=8)
+    phone: str = ''
+    businessId: str = 'test_business'
+    branchId: str = 'test_branch'
+    role: str = 'cashier'
+
+
 class StaffUserOut(BaseModel):
     id: int
     business_id: str

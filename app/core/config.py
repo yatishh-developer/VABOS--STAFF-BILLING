@@ -27,18 +27,13 @@ class Settings(BaseSettings):
 
     @property
     def effective_database_url(self) -> str:
-        """Return async SQLAlchemy URL, supporting Supabase split env values."""
+        """Return async SQLAlchemy URL, preferring Supabase split env values."""
         dotenv = dotenv_values('.env')
-        explicit_database_url = os.getenv('DATABASE_URL')
-        if explicit_database_url:
-            return str(explicit_database_url).replace(
-                'postgresql+psycopg2://',
-                'postgresql+asyncpg://',
-            )
 
         def env_value(prefixed_key: str, legacy_key: str) -> str:
             return (
                 os.getenv(prefixed_key)
+                or os.getenv(legacy_key)
                 or str(dotenv.get(prefixed_key) or '')
                 or str(dotenv.get(legacy_key) or '')
             )
@@ -52,9 +47,18 @@ class Settings(BaseSettings):
         if any([user, password, host]):
             if not all([user, password, host, port, dbname]):
                 raise ValueError('DATABASE_URL or Supabase database env parts are required')
+            if password == '[YOUR-PASSWORD]':
+                raise ValueError('Supabase database password is still the placeholder value')
             return (
                 f'postgresql+asyncpg://{quote(user, safe="")}:'
                 f'{quote(password, safe="")}@{host}:{port}/{dbname}?ssl=require'
+            )
+
+        explicit_database_url = os.getenv('DATABASE_URL')
+        if explicit_database_url:
+            return str(explicit_database_url).replace(
+                'postgresql+psycopg2://',
+                'postgresql+asyncpg://',
             )
 
         dotenv_database_url = dotenv.get('DATABASE_URL')
